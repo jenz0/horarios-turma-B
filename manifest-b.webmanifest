@@ -1,0 +1,17 @@
+{
+  "name": "Horários 7º — Turma B",
+  "short_name": "Horários 7º · B",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1E4439",
+  "theme_color": "#1E4439",
+  "icons": [
+    {
+      "src": "icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
