@@ -273,12 +273,16 @@ CARROSSEL={"2": ["Reumatologia", "Dermatologia"], "3": ["Nefrologia", "Urologia"
    documentar o motivo e proteger contra reintroducao numa grade futura. */
 const FERIADOS={"07/09/2026":"Independência do Brasil",
  "12/10/2026":"Nossa Senhora Aparecida",
- "13/10/2026":"Recesso acadêmico",
+ "13/10/2026":"Recesso do Dia dos Professores",
  "02/11/2026":"Finados",
  "20/11/2026":"Consciência Negra",
  "08/12/2026":"Nossa Senhora da Conceição"};
-/* Rotulo exibido no cabecalho do dia. Sem entrada aqui, o padrao e FERIADO. */
-const ROTULO_DIA={"13/10/2026":"RECESSO"};
+/* Aulas fixas dos dias de feriado/recesso que a grade oficial nao lista.
+   Derivadas do proprio DADOS: sao os itens que se repetem em todas as
+   semanas naquele dia da semana, sem ambulatorio (o rodizio nao e fixo).
+   Ficam FORA de DADOS de proposito: aparecem na aba Aulas mas nao entram
+   em acumular(), para nao alterar a carga horaria ja registrada. */
+const AULAS_STATUS={"12/10/2026":[{"tipo":"🟠 IMAGEM","materia":"Diagnóstico por Imagem","hor":"13:20–15:50","prof":"Profª. Adriana Matos","aulas":3,"data":"12/10/2026"},{"tipo":"⚪ ONCOLOGIA","materia":"Oncologia — Cuidados Paliativos (Teórica)","hor":"15:50–17:30","prof":"Prof. Cleydson Santos","aulas":2,"data":"12/10/2026"}],"13/10/2026":[{"tipo":"🟢 OPTATIVA","materia":"Farmacologia Clínica Cardiovascular e Metabólica","hor":"10:50–12:30","prof":"Prof. João Paulo Mauler","aulas":2,"data":"13/10/2026"},{"tipo":"⚪ ONCOLOGIA","materia":"Oncologia — Cuidados Paliativos (Laboratório B1/B2)","hor":"14:10–17:30","prof":"Prof. Bernardo Lessa","aulas":4,"data":"13/10/2026"}],"02/11/2026":[{"tipo":"🟠 IMAGEM","materia":"Diagnóstico por Imagem","hor":"13:20–15:50","prof":"Profª. Adriana Matos","aulas":3,"data":"02/11/2026"},{"tipo":"⚪ ONCOLOGIA","materia":"Oncologia — Cuidados Paliativos (Teórica)","hor":"15:50–17:30","prof":"Prof. Cleydson Santos","aulas":2,"data":"02/11/2026"}],"20/11/2026":[{"tipo":"🔵 TEORIA","materia":"Ortopedia — Teórica","hor":"14:10–15:50","prof":"Prof. Mario Sanches (R1A/R2B)","aulas":2,"data":"20/11/2026"}]};
 const KEY='horarios7_B_v4', SCHEMA=5, LIMITE=0.25;
 /* Dados proprios do usuario — chaves novas e independentes.
    Nunca sobrescrevem horarios7_B_v4 nem sao lidas por acumular(). */
@@ -710,10 +714,11 @@ function renderAulas(){
    h+=`<div class="dayhead ${eh?'hoje':''}" id="${idDia(d)}" data-d="${d}">
        <span class="nome">${nomeDia}</span><span class="dt">${d}</span>
        ${eh?'<span class="tagHoje">HOJE</span>':''}
-       ${fer?`<span class="tagFer">${ROTULO_DIA[d]||'FERIADO'}</span><span class="fernome">${esc(fer)}</span>`:''}
+       ${fer?`<span class="tagFer">FERIADO</span><span class="fernome">${esc(fer)}</span>`:''}
        <span class="risco"></span></div>`;
    /* linha do tempo do dia: aula oficial + minha agenda + meus blocos */
-   const linha=porData[d].map(i=>({k:'a',i,t:hm(i.hor.slice(0,5))}));
+   const extras=(AULAS_STATUS[d]||[]).filter(i=>!fm||i.materia===fm);
+   const linha=[...porData[d],...extras].map(i=>({k:'a',i,t:hm(i.hor.slice(0,5))}));
    if(!fm){pessDia(d).forEach(a=>linha.push({k:'p',a,t:hm(a.ini)}));
            blkpDia(d).forEach(b=>linha.push({k:'b',b,t:hm(b.ini)}));}
    linha.sort((x,y)=>x.t-y.t);
