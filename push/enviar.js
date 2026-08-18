@@ -31,6 +31,7 @@ const FUSO = -3;                 // Salvador, sem horário de verão
 const ANTECEDENCIA = 15;         // avisar N min antes
 const JANELA = 15;               // largura da janela (= intervalo do cron)
 const ATRASO = 30;               // recuperar aula perdida até N min após o início
+const HORA_FERIADO = 7 * 60;     // aviso de feriado entregue às 07:00 em ponto
 /* Ícones: o mesmo arquivo serve as duas turmas — usa o que existir no repo. */
 const achar = (...nomes) => nomes.find(n => fs.existsSync(path.join(RAIZ, n)));
 const ICONE = './' + (achar('icon-192-a.png', 'icone-512.png', 'icon-512-a.png') || 'icone-512.png');
@@ -53,6 +54,7 @@ function ler() {
     DADOS:  pega(/const DADOS=(\[[\s\S]*?\]),\nBLOCOS=/, 'DADOS'),
     BLOCOS: pega(/\nBLOCOS=(\[[\s\S]*?\]),\nCARROSSEL=/, 'BLOCOS'),
     CARROSSEL: pega(/\nCARROSSEL=(\{[\s\S]*?\});/, 'CARROSSEL'),
+    FERIADOS:  pega(/\nconst FERIADOS=(\{[\s\S]*?\});/, 'FERIADOS'),
   };
 }
 
@@ -101,7 +103,7 @@ function textoBloco(b, sem, CARROSSEL) {
 }
 
 /* ---------- monta a fila ---------- */
-function pendentes({ DADOS, BLOCOS, CARROSSEL }) {
+function pendentes({ DADOS, BLOCOS, CARROSSEL, FERIADOS }) {
   const ag = agoraLocal();
   const hojeMs = Date.UTC(ag.getUTCFullYear(), ag.getUTCMonth(), ag.getUTCDate());
   const minAgora = ag.getUTCHours() * 60 + ag.getUTCMinutes();
@@ -110,7 +112,25 @@ function pendentes({ DADOS, BLOCOS, CARROSSEL }) {
   const dentro = ini => ini >= desde && ini < ate;
   const fila = [];
 
-  for (const w of DADOS)
+  /* Feriado: nenhuma notificação de aula, apenas um aviso às 07:00.
+     A janela vai de 07:00 até 07:45 para absorver o atraso típico do
+     agendamento do GitHub Actions. A unicidade no dia vem de duas
+     camadas: enviados.json (quando o estado persiste entre execuções)
+     e a tag `feriado-DD/MM/AAAA`, que faz o iOS SUBSTITUIR a notificação
+     em vez de empilhar caso ela saia mais de uma vez. */
+  const hojeStr = `${String(ag.getUTCDate()).padStart(2,'0')}/${String(ag.getUTCMonth()+1).padStart(2,'0')}/${ag.getUTCFullYear()}`;
+  const feriado = FERIADOS[hojeStr];
+
+  if (feriado && minAgora >= HORA_FERIADO && minAgora < HORA_FERIADO + JANELA + ATRASO)
+    fila.push({
+      title: 'Feriado',
+      body: `${feriado} — não há aula hoje.`,
+      tag: `feriado-${hojeStr}`,
+      atrasado: false,
+      data: { tipo: 'feriado' },
+    });
+
+  if (!feriado) for (const w of DADOS)
     for (const i of w.itens) {
       if (pData(i.data) !== hojeMs) continue;
       const ini = min(i.hor);
